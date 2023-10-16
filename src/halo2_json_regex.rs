@@ -252,15 +252,17 @@ mod tests {
 
     #[test]
     fn test_regex_check_1() {
-        let k = 4;
+        let k = 6;
 
-        set_regex_check_config_params(String::from("{\"[a-z]+\"}"));
+        // Set the regex to match as {"a-z]+":"[0-9]+"}
+        set_regex_check_config_params(String::from("{\"[a-z]+\":\"[0-9]+\"}"));
 
         // Successful cases
         {
+            // A Successful test case {"abc":"123"}
             let circuit = MyRegexCircuit::<Fp> {
                 data_to_verify: MyRegexCircuit::<Fp>::convert_input_to_verify_format(String::from(
-                    "{\"abc\"}",
+                    "{\"abc\":\"123\"}",
                 )),
             };
 
@@ -270,11 +272,25 @@ mod tests {
             prover.assert_satisfied();
         }
 
-        // failed test case
+        // Failed test case 1
         {
+            // Failed test case "{{\"abc\":\"123\"}", with double {{ in front
             let circuit = MyRegexCircuit::<Fp> {
                 data_to_verify: MyRegexCircuit::<Fp>::convert_input_to_verify_format(String::from(
-                    "{{\"abc\"}",
+                    "{{\"abc\":\"123\"}",
+                )),
+            };
+            let prover = MockProver::run(k, &circuit, vec![]).unwrap();
+            let result = prover.verify();
+            assert!(result.is_err());
+        }
+
+        // Failed test case 2
+        {
+            // Failed test case "{\"abcA\":\"123\"}", A is not allowed in the key
+            let circuit = MyRegexCircuit::<Fp> {
+                data_to_verify: MyRegexCircuit::<Fp>::convert_input_to_verify_format(String::from(
+                    "{\"abcA\":\"123\"}",
                 )),
             };
             let prover = MockProver::run(k, &circuit, vec![]).unwrap();
@@ -287,6 +303,7 @@ mod tests {
     fn test_regex_check_2() {
         let k = 6;
 
+        // Set the regex to match as {"a-z]+":"[a-zA-Z0-9]+]+"}
         set_regex_check_config_params(String::from("{\"[a-z]+\":\"[a-zA-Z0-9]+\"}"));
 
         // Successful cases
@@ -305,6 +322,7 @@ mod tests {
 
         // failed test case
         {
+            // Failed test case {"abc7":"abc"}, 7 is not allowed in the key
             let circuit = MyRegexCircuit::<Fp> {
                 data_to_verify: MyRegexCircuit::<Fp>::convert_input_to_verify_format(String::from(
                     "{\"abc7\":\"abc\"}",
